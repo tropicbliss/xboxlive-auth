@@ -1322,7 +1322,6 @@ dependencies = [
  "anyhow",
  "regex",
  "reqwest",
- "serde",
  "serde_json",
  "structopt",
 ]
