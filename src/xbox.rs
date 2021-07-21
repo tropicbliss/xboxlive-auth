@@ -58,6 +58,10 @@ impl Auth {
             .post(&login_data.url_post)
             .form(&params)
             .send()?;
+        let status = res.status().clone().as_u16();
+        if status != 200 {
+            bail!("Something went wrong: Status code: {}", status);
+        }
         let url = res.url().clone();
         let text = res.text()?;
         if !url.to_string().contains("access_token") && url.as_str() == login_data.url_post {

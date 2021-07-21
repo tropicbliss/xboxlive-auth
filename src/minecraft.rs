@@ -46,6 +46,10 @@ impl Auth {
             .json(&json)
             .header(ACCEPT, "application/json")
             .send()?;
+        let status = res.status().clone().as_u16();
+        if status != 200 {
+            bail!("Something went wrong: Status code: {}", status);
+        }
         let text = res.text()?;
         let v: Value = serde_json::from_str(&text)?;
         let token = v["Token"].as_str().unwrap().to_string();
@@ -82,16 +86,25 @@ impl Auth {
             }
             if err == 2_148_916_238 {
                 bail!("The account is a child (under 18) and cannot proceed unless the account is added to a Family by an adult. This only seems to occur when using a custom Microsoft Azure application. When using the Minecraft launchers client id, this doesn't trigger.");
+            } else {
+                bail!("Something went wrong.");
             }
+        } else if status == 200 {
+            let token = v["Token"].as_str().unwrap().to_string();
+            Ok(token)
+        } else {
+            bail!("Something went wrong: Status code: {}", status);
         }
-        let token = v["Token"].as_str().unwrap().to_string();
-        Ok(token)
     }
 
     fn authenticate_with_minecraft(&self, userhash: &str, xsts_token: &str) -> Result<String> {
         let url = "https://api.minecraftservices.com/authentication/login_with_xbox";
         let json = json!({ "identityToken": format!("XBL3.0 x={};{}", userhash, xsts_token) });
         let res = self.client.post(url).json(&json).send()?;
+        let status = res.status().clone().as_u16();
+        if status != 200 {
+            bail!("Something went wrong: Status code: {}", status);
+        }
         let text = res.text()?;
         let v: Value = serde_json::from_str(&text)?;
         let bearer = v["access_token"].as_str().unwrap().to_string();
