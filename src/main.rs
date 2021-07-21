@@ -6,7 +6,6 @@ mod xbox;
 use anyhow::{Context, Result};
 
 fn main() -> Result<()> {
-    env_logger::init();
     let account_data = cli::Args::parse_args();
     let xbox = xbox::Auth::new(account_data.email, account_data.password)
         .with_context(|| "Error creating an authenticator")?;

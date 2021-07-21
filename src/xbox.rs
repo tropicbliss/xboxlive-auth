@@ -1,6 +1,9 @@
 use anyhow::{bail, Result};
 use regex::Regex;
-use reqwest::{blocking::Client, header::ACCEPT};
+use reqwest::{
+    blocking::Client,
+    header::{HeaderMap, ACCEPT},
+};
 use serde_json::{json, Value};
 use std::{collections::HashMap, time::Duration};
 
@@ -24,7 +27,6 @@ impl Auth {
     pub fn new(email: String, password: String) -> Result<Self> {
         let client = Client::builder()
             .cookie_store(true)
-            .connection_verbose(true)
             .timeout(Duration::from_secs(5))
             .build()?;
         Ok(Self {
@@ -109,12 +111,10 @@ impl Auth {
             "RelyingParty": "http://auth.xboxlive.com",
             "TokenType": "JWT"
         });
-        let res = self
-            .client
-            .post(url)
-            .json(&json)
-            .header(ACCEPT, "application/json")
-            .send()?;
+        let mut headers = HeaderMap::new();
+        headers.insert(ACCEPT, "application/json".parse()?);
+        headers.insert("x-xbl-contract-version", "0".parse()?);
+        let res = self.client.post(url).json(&json).headers(headers).send()?;
         let status = res.status().clone().as_u16();
         if status != 200 {
             bail!("Something went wrong: Status code: {}", status);
