@@ -1,9 +1,6 @@
 use anyhow::{bail, Result};
 use regex::Regex;
-use reqwest::{
-    blocking::Client,
-    header::{HeaderMap, ACCEPT},
-};
+use reqwest::{blocking::Client, header::ACCEPT};
 use serde_json::{json, Value};
 use std::{collections::HashMap, time::Duration};
 
@@ -46,10 +43,10 @@ impl Auth {
         const URL: &str = "https://login.live.com/oauth20_authorize.srf?client_id=000000004C12AE6F&redirect_uri=https://login.live.com/oauth20_desktop.srf&scope=service::user.auth.xboxlive.com::MBI_SSL&display=touch&response_type=token&locale=en";
         let res = self.client.get(URL).send()?;
         let html = res.text()?;
-        let ppft_re = Regex::new(r#"value="(.+?)""#).unwrap();
+        let ppft_re = Regex::new(r#"value="(.+?)""#)?;
         let ppft_captures = ppft_re.captures(&html).unwrap();
         let ppft = ppft_captures.get(1).unwrap().as_str().to_string();
-        let urlpost_re = Regex::new(r#"urlPost:'(.+?)'"#).unwrap();
+        let urlpost_re = Regex::new(r#"urlPost:'(.+?)'"#)?;
         let urlpost_captures = urlpost_re.captures(&html).unwrap();
         let url_post = urlpost_captures.get(1).unwrap().as_str().to_string();
         Ok(LoginData { ppft, url_post })
@@ -111,10 +108,12 @@ impl Auth {
             "RelyingParty": "http://auth.xboxlive.com",
             "TokenType": "JWT"
         });
-        let mut headers = HeaderMap::new();
-        headers.insert(ACCEPT, "application/json".parse()?);
-        headers.insert("x-xbl-contract-version", "0".parse()?);
-        let res = self.client.post(url).json(&json).headers(headers).send()?;
+        let res = self
+            .client
+            .post(url)
+            .json(&json)
+            .header(ACCEPT, "application/json")
+            .send()?;
         let status = res.status().clone().as_u16();
         if status != 200 {
             bail!("Something went wrong: Status code: {}", status);
