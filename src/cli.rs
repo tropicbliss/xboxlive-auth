@@ -1,6 +1,6 @@
 use structopt::StructOpt;
 
-/// A program to retrieve a Minecraft account's access token based on the new Microsoft authentication scheme
+/// A program to retrieve a Minecraft account's bearer token based on the new Microsoft authentication scheme
 #[derive(StructOpt, Debug)]
 #[structopt()]
 pub struct Args {
