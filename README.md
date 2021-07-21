@@ -1,6 +1,8 @@
 # xboxlive-auth
 A proof-of-concept program to retrieve a Minecraft account's access token based on the new Microsoft authentication scheme.
 
+This program will not work on macOS for some reason. If you have any idea what's going wrong please let me know.
+
 ## Command line arguments
 
 Run `xboxlive-auth --help` or `./xboxlive-auth --help`.
