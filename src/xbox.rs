@@ -24,6 +24,7 @@ impl Auth {
     pub fn new(email: String, password: String) -> Result<Self> {
         let client = Client::builder()
             .cookie_store(true)
+            .connection_verbose(true)
             .timeout(Duration::from_secs(5))
             .build()?;
         Ok(Self {
