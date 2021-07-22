@@ -66,7 +66,7 @@ impl Auth {
             .send()?;
         let status = res.status().clone().as_u16();
         if status != 200 {
-            bail!("Something went wrong: Status code: {}", status);
+            bail!("Something went wrong. Status code: {}", status);
         }
         let url = res.url().clone();
         let text = res.text()?;
@@ -116,7 +116,7 @@ impl Auth {
             .send()?;
         let status = res.status().clone().as_u16();
         if status != 200 {
-            bail!("Something went wrong: Status code: {}", status);
+            bail!("Something went wrong. Status code: {}", status);
         }
         let text = res.text()?;
         let v: Value = serde_json::from_str(&text)?;
@@ -170,7 +170,7 @@ impl Auth {
         let res = self.client.post(URL).json(&json).send()?;
         let status = res.status().clone().as_u16();
         if status != 200 {
-            bail!("Something went wrong: Status code: {}", status);
+            bail!("Something went wrong. Status code: {}", status);
         }
         let text = res.text()?;
         let v: Value = serde_json::from_str(&text)?;
