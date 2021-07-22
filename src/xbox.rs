@@ -98,7 +98,7 @@ impl Auth {
     }
 
     fn authenticate_with_xbl(&self, access_token: &str) -> Result<XBLData> {
-        let url = "https://user.auth.xboxlive.com/user/authenticate";
+        const URL: &str = "https://user.auth.xboxlive.com/user/authenticate";
         let json = json!({
             "Properties": {
                 "AuthMethod": "RPS",
@@ -110,7 +110,7 @@ impl Auth {
         });
         let res = self
             .client
-            .post(url)
+            .post(URL)
             .json(&json)
             .header(ACCEPT, "application/json")
             .send()?;
@@ -129,7 +129,7 @@ impl Auth {
     }
 
     fn authenticate_with_xsts(&self, token: &str) -> Result<String> {
-        let url = "https://xsts.auth.xboxlive.com/xsts/authorize";
+        const URL: &str = "https://xsts.auth.xboxlive.com/xsts/authorize";
         let json = json!({
             "Properties": {
                 "SandboxId": "RETAIL",
@@ -140,7 +140,7 @@ impl Auth {
         });
         let res = self
             .client
-            .post(url)
+            .post(URL)
             .header(ACCEPT, "application/json")
             .json(&json)
             .send()?;
@@ -165,9 +165,9 @@ impl Auth {
     }
 
     fn authenticate_with_minecraft(&self, userhash: &str, xsts_token: &str) -> Result<String> {
-        let url = "https://api.minecraftservices.com/authentication/login_with_xbox";
+        const URL: &str = "https://api.minecraftservices.com/authentication/login_with_xbox";
         let json = json!({ "identityToken": format!("XBL3.0 x={};{}", userhash, xsts_token) });
-        let res = self.client.post(url).json(&json).send()?;
+        let res = self.client.post(URL).json(&json).send()?;
         let status = res.status().clone().as_u16();
         if status != 200 {
             bail!("Something went wrong: Status code: {}", status);
