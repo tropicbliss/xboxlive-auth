@@ -80,9 +80,9 @@ impl<'a> Auth<'a> {
             .post(&login_data.url_post)
             .form(&params)
             .send()?;
-        let status = res.status().clone().as_u16();
-        if status != 200 {
-            bail!("Something went wrong. Status code: {}", status);
+        let status = res.status();
+        if status.as_u16() != 200 {
+            bail!("HTTP {}", status);
         }
         let url = res.url().clone();
         let text = res.text()?;
@@ -139,9 +139,9 @@ impl<'a> Auth<'a> {
             .json(&json)
             .header(ACCEPT, "application/json")
             .send()?;
-        let status = res.status().clone().as_u16();
-        if status != 200 {
-            bail!("Something went wrong. Status code: {}", status);
+        let status = res.status();
+        if status.as_u16() != 200 {
+            bail!("HTTP {}", status);
         }
         let text = res.text()?;
         let v: Value = serde_json::from_str(&text)?;
@@ -172,10 +172,10 @@ impl<'a> Auth<'a> {
             .header(ACCEPT, "application/json")
             .json(&json)
             .send()?;
-        let status = res.status().clone().as_u16();
+        let status = res.status();
         let text = res.text()?;
         let v: Value = serde_json::from_str(&text)?;
-        if status == 401 {
+        if status.as_u16() == 401 {
             let err = v["XErr"]
                 .as_u64()
                 .ok_or_else(|| anyhow!("Error parsing error message from JSON"))?;
@@ -186,14 +186,14 @@ impl<'a> Auth<'a> {
                 bail!("The account is a child (under 18) and cannot proceed unless the account is added to a Family by an adult. This only seems to occur when using a custom Microsoft Azure application. When using the Minecraft launchers client id, this doesn't trigger.");
             }
             bail!("Something went wrong.");
-        } else if status == 200 {
+        } else if status.as_u16() == 200 {
             let token = v["Token"]
                 .as_str()
                 .ok_or_else(|| anyhow!("Error parsing XSTS token from JSON"))?
                 .to_string();
             Ok(token)
         } else {
-            bail!("Something went wrong: Status code: {}", status);
+            bail!("HTTP {}", status);
         }
     }
 
@@ -201,9 +201,9 @@ impl<'a> Auth<'a> {
         const URL: &str = "https://api.minecraftservices.com/authentication/login_with_xbox";
         let json = json!({ "identityToken": format!("XBL3.0 x={};{}", userhash, xsts_token) });
         let res = self.client.post(URL).json(&json).send()?;
-        let status = res.status().clone().as_u16();
-        if status != 200 {
-            bail!("Something went wrong. Status code: {}", status);
+        let status = res.status();
+        if status.as_u16() != 200 {
+            bail!("HTTP {}", status);
         }
         let text = res.text()?;
         let v: Value = serde_json::from_str(&text)?;
