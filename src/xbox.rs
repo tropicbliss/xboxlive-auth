@@ -1,12 +1,12 @@
-use anyhow::{bail, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use regex::Regex;
 use reqwest::{blocking::Client, header::ACCEPT};
 use serde_json::{json, Value};
 use std::{collections::HashMap, time::Duration};
 
-pub struct Auth {
-    username: String,
-    password: String,
+pub struct Auth<'a> {
+    email: &'a str,
+    password: &'a str,
     client: Client,
 }
 
@@ -20,22 +20,22 @@ struct XBLData {
     userhash: String,
 }
 
-impl Auth {
-    pub fn new(email: String, password: String) -> Result<Self> {
+impl<'a> Auth<'a> {
+    pub fn new(email: &'a str, password: &'a str) -> Result<Self> {
         let client = Client::builder()
             .cookie_store(true)
             .timeout(Duration::from_secs(5))
             .build()?;
         Ok(Self {
-            username: email,
+            email,
             password,
             client,
         })
     }
 
     pub fn get_access_token(&self) -> Result<String> {
-        let login_data = self.get_login_data()?;
-        let access_token = self.sign_in(&login_data)?;
+        let login_data = self.get_login_data().with_context(|| "Error getting login data")?;
+        let access_token = self.sign_in(&login_data).with_context(|| "Error getting access token")?;
         Ok(access_token)
     }
 
@@ -44,19 +44,19 @@ impl Auth {
         let res = self.client.get(URL).send()?;
         let html = res.text()?;
         let ppft_re = Regex::new(r#"value="(.+?)""#)?;
-        let ppft_captures = ppft_re.captures(&html).unwrap();
-        let ppft = ppft_captures.get(1).unwrap().as_str().to_string();
+        let ppft_captures = ppft_re.captures(&html).ok_or_else(|| anyhow!("Error capturing PPFT from regex"))?;
+        let ppft = ppft_captures.get(1).ok_or_else(|| anyhow!("Error getting PPFT"))?.as_str().to_string();
         let urlpost_re = Regex::new(r#"urlPost:'(.+?)'"#)?;
-        let urlpost_captures = urlpost_re.captures(&html).unwrap();
-        let url_post = urlpost_captures.get(1).unwrap().as_str().to_string();
+        let urlpost_captures = urlpost_re.captures(&html).with_context(|| anyhow!("Error capturing POST URL from regex"))?;
+        let url_post = urlpost_captures.get(1).ok_or_else(|| anyhow!("Error getting POST URL"))?.as_str().to_string();
         Ok(LoginData { ppft, url_post })
     }
 
     fn sign_in(&self, login_data: &LoginData) -> Result<String> {
         let params = [
-            ("login", &self.username),
-            ("loginfmt", &self.username),
-            ("passwd", &self.password),
+            ("login", self.email),
+            ("loginfmt", self.email),
+            ("passwd", self.password),
             ("PPFT", &login_data.ppft),
         ];
         let res = self
@@ -80,20 +80,20 @@ impl Auth {
         }
         let mut param: HashMap<&str, &str> = url
             .fragment()
-            .unwrap()
+            .ok_or_else(|| anyhow!("Error parsing params"))?
             .split('&')
             .map(|kv| {
                 let mut key_value: Vec<&str> = kv.split('=').collect();
                 (key_value.remove(0), key_value.remove(0))
             })
             .collect();
-        Ok(param.remove("access_token").unwrap().to_string())
+        Ok(param.remove("access_token").ok_or_else(|| anyhow!("Error getting access token from params"))?.to_string())
     }
 
     pub fn get_bearer_token(&self, access_token: &str) -> Result<String> {
-        let xbl_data = self.authenticate_with_xbl(access_token)?;
-        let xsts_token = self.authenticate_with_xsts(&xbl_data.token)?;
-        let bearer_token = self.authenticate_with_minecraft(&xbl_data.userhash, &xsts_token)?;
+        let xbl_data = self.authenticate_with_xbl(access_token).with_context(|| "Error getting Xbox Live data")?;
+        let xsts_token = self.authenticate_with_xsts(&xbl_data.token).with_context(|| "Error getting XSTS token")?;
+        let bearer_token = self.authenticate_with_minecraft(&xbl_data.userhash, &xsts_token).with_context(|| "Error getting bearer token")?;
         Ok(bearer_token)
     }
 
@@ -120,10 +120,10 @@ impl Auth {
         }
         let text = res.text()?;
         let v: Value = serde_json::from_str(&text)?;
-        let token = v["Token"].as_str().unwrap().to_string();
+        let token = v["Token"].as_str().ok_or_else(|| anyhow!("Error parsing access token from JSON"))?.to_string();
         let userhash = v["DisplayClaims"]["xui"][0]["uhs"]
             .as_str()
-            .unwrap()
+            .ok_or_else(|| anyhow!("Error parsing user hash from JSON"))?
             .to_string();
         Ok(XBLData { token, userhash })
     }
@@ -148,7 +148,7 @@ impl Auth {
         let text = res.text()?;
         let v: Value = serde_json::from_str(&text)?;
         if status == 401 {
-            let err = v["XErr"].as_u64().unwrap();
+            let err = v["XErr"].as_u64().ok_or_else(|| anyhow!("Error parsing error message from JSON"))?;
             if err == 2_148_916_233 {
                 bail!("The account doesn't have an Xbox account. Once they sign up for one (or login through minecraft.net to create one) then they can proceed with the login. This shouldn't happen with accounts that have purchased Minecraft with a Microsoft account, as they would've already gone through that Xbox signup process.");
             }
@@ -157,7 +157,7 @@ impl Auth {
             }
             bail!("Something went wrong.");
         } else if status == 200 {
-            let token = v["Token"].as_str().unwrap().to_string();
+            let token = v["Token"].as_str().ok_or_else(|| anyhow!("Error parsing XSTS token from JSON"))?.to_string();
             Ok(token)
         } else {
             bail!("Something went wrong: Status code: {}", status);
@@ -174,7 +174,7 @@ impl Auth {
         }
         let text = res.text()?;
         let v: Value = serde_json::from_str(&text)?;
-        let bearer = v["access_token"].as_str().unwrap().to_string();
+        let bearer = v["access_token"].as_str().ok_or_else(|| anyhow!("Error parsing bearer token from JSON"))?.to_string();
         Ok(bearer)
     }
 }
