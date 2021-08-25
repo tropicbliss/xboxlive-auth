@@ -17,7 +17,7 @@ pub fn read_acc_file() -> Result<Vec<Account>> {
         let line = line?;
         let line_vec: Vec<&str> = line.split(':').collect();
         if line_vec.len() != 2 {
-            bail!("Failed to parse accounts.txt");
+            bail!("Failed to parse accounts.txt. If there is a colon in your email or password this will not work");
         }
         let email = line_vec
             .get(0)

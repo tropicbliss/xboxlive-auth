@@ -21,6 +21,6 @@ fn main() -> Result<()> {
         bearer_vec.push(bearer_token);
     }
     fileio::write_bearer_file(&bearer_vec).with_context(|| "Failed to write bearers.txt")?;
-    writeln!(stdout(), "Bearer tokens saved to bearers.txt")?;
+    writeln!(stdout(), "Bearer token(s) saved to bearers.txt")?;
     Ok(())
 }
