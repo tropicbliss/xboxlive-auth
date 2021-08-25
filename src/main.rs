@@ -4,6 +4,7 @@ mod fileio;
 mod xbox;
 
 use anyhow::{Context, Result};
+use std::io::{stdout, Write};
 
 fn main() -> Result<()> {
     let account_vec = fileio::read_acc_file().with_context(|| "Failed to read accounts.txt")?;
@@ -20,5 +21,6 @@ fn main() -> Result<()> {
         bearer_vec.push(bearer_token);
     }
     fileio::write_bearer_file(&bearer_vec).with_context(|| "Failed to write bearers.txt")?;
+    writeln!(stdout(), "Bearer tokens saved to bearers.txt")?;
     Ok(())
 }
