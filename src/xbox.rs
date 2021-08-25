@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{anyhow, bail, Context, Result};
 use regex::Regex;
 use reqwest::{blocking::Client, header::ACCEPT};
 use serde_json::{json, Value};
@@ -34,8 +34,12 @@ impl<'a> Auth<'a> {
     }
 
     pub fn get_access_token(&self) -> Result<String> {
-        let login_data = self.get_login_data().with_context(|| "Error getting login data")?;
-        let access_token = self.sign_in(&login_data).with_context(|| "Error getting access token")?;
+        let login_data = self
+            .get_login_data()
+            .with_context(|| "Error getting login data")?;
+        let access_token = self
+            .sign_in(&login_data)
+            .with_context(|| "Error getting access token")?;
         Ok(access_token)
     }
 
@@ -44,11 +48,23 @@ impl<'a> Auth<'a> {
         let res = self.client.get(URL).send()?;
         let html = res.text()?;
         let ppft_re = Regex::new(r#"value="(.+?)""#)?;
-        let ppft_captures = ppft_re.captures(&html).ok_or_else(|| anyhow!("Error capturing PPFT from regex"))?;
-        let ppft = ppft_captures.get(1).ok_or_else(|| anyhow!("Error getting PPFT"))?.as_str().to_string();
+        let ppft_captures = ppft_re
+            .captures(&html)
+            .ok_or_else(|| anyhow!("Error capturing PPFT from regex"))?;
+        let ppft = ppft_captures
+            .get(1)
+            .ok_or_else(|| anyhow!("Error getting PPFT"))?
+            .as_str()
+            .to_string();
         let urlpost_re = Regex::new(r#"urlPost:'(.+?)'"#)?;
-        let urlpost_captures = urlpost_re.captures(&html).with_context(|| anyhow!("Error capturing POST URL from regex"))?;
-        let url_post = urlpost_captures.get(1).ok_or_else(|| anyhow!("Error getting POST URL"))?.as_str().to_string();
+        let urlpost_captures = urlpost_re
+            .captures(&html)
+            .with_context(|| anyhow!("Error capturing POST URL from regex"))?;
+        let url_post = urlpost_captures
+            .get(1)
+            .ok_or_else(|| anyhow!("Error getting POST URL"))?
+            .as_str()
+            .to_string();
         Ok(LoginData { ppft, url_post })
     }
 
@@ -87,13 +103,22 @@ impl<'a> Auth<'a> {
                 (key_value.remove(0), key_value.remove(0))
             })
             .collect();
-        Ok(param.remove("access_token").ok_or_else(|| anyhow!("Error getting access token from params"))?.to_string())
+        Ok(param
+            .remove("access_token")
+            .ok_or_else(|| anyhow!("Error getting access token from params"))?
+            .to_string())
     }
 
     pub fn get_bearer_token(&self, access_token: &str) -> Result<String> {
-        let xbl_data = self.authenticate_with_xbl(access_token).with_context(|| "Error getting Xbox Live data")?;
-        let xsts_token = self.authenticate_with_xsts(&xbl_data.token).with_context(|| "Error getting XSTS token")?;
-        let bearer_token = self.authenticate_with_minecraft(&xbl_data.userhash, &xsts_token).with_context(|| "Error getting bearer token")?;
+        let xbl_data = self
+            .authenticate_with_xbl(access_token)
+            .with_context(|| "Error getting Xbox Live data")?;
+        let xsts_token = self
+            .authenticate_with_xsts(&xbl_data.token)
+            .with_context(|| "Error getting XSTS token")?;
+        let bearer_token = self
+            .authenticate_with_minecraft(&xbl_data.userhash, &xsts_token)
+            .with_context(|| "Error getting bearer token")?;
         Ok(bearer_token)
     }
 
@@ -120,7 +145,10 @@ impl<'a> Auth<'a> {
         }
         let text = res.text()?;
         let v: Value = serde_json::from_str(&text)?;
-        let token = v["Token"].as_str().ok_or_else(|| anyhow!("Error parsing access token from JSON"))?.to_string();
+        let token = v["Token"]
+            .as_str()
+            .ok_or_else(|| anyhow!("Error parsing access token from JSON"))?
+            .to_string();
         let userhash = v["DisplayClaims"]["xui"][0]["uhs"]
             .as_str()
             .ok_or_else(|| anyhow!("Error parsing user hash from JSON"))?
@@ -148,7 +176,9 @@ impl<'a> Auth<'a> {
         let text = res.text()?;
         let v: Value = serde_json::from_str(&text)?;
         if status == 401 {
-            let err = v["XErr"].as_u64().ok_or_else(|| anyhow!("Error parsing error message from JSON"))?;
+            let err = v["XErr"]
+                .as_u64()
+                .ok_or_else(|| anyhow!("Error parsing error message from JSON"))?;
             if err == 2_148_916_233 {
                 bail!("The account doesn't have an Xbox account. Once they sign up for one (or login through minecraft.net to create one) then they can proceed with the login. This shouldn't happen with accounts that have purchased Minecraft with a Microsoft account, as they would've already gone through that Xbox signup process.");
             }
@@ -157,7 +187,10 @@ impl<'a> Auth<'a> {
             }
             bail!("Something went wrong.");
         } else if status == 200 {
-            let token = v["Token"].as_str().ok_or_else(|| anyhow!("Error parsing XSTS token from JSON"))?.to_string();
+            let token = v["Token"]
+                .as_str()
+                .ok_or_else(|| anyhow!("Error parsing XSTS token from JSON"))?
+                .to_string();
             Ok(token)
         } else {
             bail!("Something went wrong: Status code: {}", status);
@@ -174,7 +207,10 @@ impl<'a> Auth<'a> {
         }
         let text = res.text()?;
         let v: Value = serde_json::from_str(&text)?;
-        let bearer = v["access_token"].as_str().ok_or_else(|| anyhow!("Error parsing bearer token from JSON"))?.to_string();
+        let bearer = v["access_token"]
+            .as_str()
+            .ok_or_else(|| anyhow!("Error parsing bearer token from JSON"))?
+            .to_string();
         Ok(bearer)
     }
 }
