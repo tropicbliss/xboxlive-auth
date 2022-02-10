@@ -1,7 +1,7 @@
 # xboxlive-auth
 A proof-of-concept program to retrieve a Minecraft account's bearer token based on the new Microsoft authentication scheme.
 
-This program will not work on macOS for some reason. If you have any idea what's going on please let me know.
+This program will not work on macOS because of TLS renegotiation issues.
 
 ## Compiling from source
 
